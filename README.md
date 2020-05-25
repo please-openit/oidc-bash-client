@@ -77,6 +77,10 @@ using the access_token we got previously :
 
 ## Build for Keycloak ?
 
+Of course ! Keycloak has its own discovery document (for a realm) with the "OpenID Endpoint Configuration" link. Keycloak supports all operations of this bash script, please refer to the documentation links for each operation below.
+
+Feel free to test it with a realm you can get at [https://realms.please-open.it](https://realms.please-open.it).
+
 ## Filter
 
 Each operation output some formatted JSON code. By using --field argument, you can filter the output with JQ [grammar](https://jqplay.org/).
