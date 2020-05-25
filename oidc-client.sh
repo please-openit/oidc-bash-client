@@ -2,7 +2,7 @@
 
 
 function get_oidc_server_infos {
-    curl -sS $1 | jq $2 -r
+    curl -sS $OPENID_ENDPOINT | jq $FIELD -r
 }
 
 function client_credentials {
@@ -105,6 +105,9 @@ function implicit_grant {
           ACCESS_TOKEN=$(echo "$REQUEST" | sed -n 's/^.*access_token=\([^&]*\).*$/\1/p')
           HTML="<html><head><body></body><script>\
                  var paramStr = window.location.hash.substring(1);\
+                 if(paramStr == \"\"){\
+                    paramStr = window.location.search.substring(1);\
+                 }\
                  var params = {} \
                  var vars = paramStr.split('&');
                  for (var i = 0; i < vars.length; i++) {
@@ -154,6 +157,9 @@ function authorization_code_grant {
           ACCESS_TOKEN=$(echo "$REQUEST" | sed -n 's/^.*access_token=\([^&]*\).*$/\1/p')
           HTML="<html><head><body></body><script>\
                  var paramStr = window.location.hash.substring(1);\
+                 if(paramStr == \"\"){\
+                    paramStr = window.location.search.substring(1);\
+                 }\
                  var params = {} \
                  var vars = paramStr.split('&');
                  for (var i = 0; i < vars.length; i++) {
@@ -220,7 +226,7 @@ echo "    implicit_grant"
 echo "    authorization_code_grant"
 echo "    auth_code"
 echo "    token_introspect"
-echo "    user_infos"
+echo "    user_info"
 echo ""
 echo " --field : filter for JQ"
 echo ""
