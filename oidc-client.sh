@@ -551,5 +551,9 @@ case "$OPERATION" in
     fi
     user_info
     ;;
+    *)
+    echo "unsupported operation"
+    exit 1
+    ;;
 esac
 
