@@ -61,7 +61,6 @@ function token_introspect {
       --header 'Content-Type: application/x-www-form-urlencoded' \
       --user $CLIENT_ID:$CLIENT_SECRET \
       --data token=$ACCESS_TOKEN \
-      --data grant_type=refresh_token \
  | jq $FIELD -r
 }
 
