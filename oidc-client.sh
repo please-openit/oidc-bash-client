@@ -531,7 +531,7 @@ case "$OPERATION" in
       echo "Error: --access-token is missing" >&2
       exit 1
     fi
-    if [ -z "$TOKEN_ENDPOINT" ]; then
+    if [ -z "$TOKEN_INTROSPECTION_ENDPOINT" ]; then
       TOKEN_INTROSPECTION_ENDPOINT=$(curl -sS $OPENID_ENDPOINT | jq .token_introspection_endpoint -r)
     fi
     token_introspect
