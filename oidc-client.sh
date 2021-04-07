@@ -531,7 +531,7 @@ case "$OPERATION" in
       exit 1
     fi
     if [ -z "$TOKEN_INTROSPECTION_ENDPOINT" ]; then
-      TOKEN_INTROSPECTION_ENDPOINT=$(curl -sS $OPENID_ENDPOINT | jq .token_introspection_endpoint -r)
+      TOKEN_INTROSPECTION_ENDPOINT=$(curl -sS $OPENID_ENDPOINT | jq .introspection_endpoint -r)
     fi
     token_introspect
     ;;
