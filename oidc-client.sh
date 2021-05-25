@@ -1,6 +1,5 @@
 #!/bin/bash
 
-
 function get_oidc_server_infos {
     curl -sS $OPENID_ENDPOINT | jq $FIELD -r
 }
@@ -70,6 +69,26 @@ function user_info {
       --header 'Content-Type: application/x-www-form-urlencoded' \
       --header "Authorization: Bearer $ACCESS_TOKEN"\
  | jq $FIELD -r
+}
+
+function device_code {
+  curl -sS --request POST --url $DEVICE_ENDPOINT \
+      --header 'Accept: */*' \
+      --header 'Content-Type: application/x-www-form-urlencoded' \
+      --data client_id=$CLIENT_ID \
+      --data client_secret=$CLIENT_SECRET \
+  | jq $FIELD -r
+}
+
+function poll_token {
+  curl -sS --request POST --url $TOKEN_ENDPOINT \
+      --header 'Accept: */*' \
+      --header 'Content-Type: application/x-www-form-urlencoded' \
+      --data client_id=$CLIENT_ID \
+      --data client_secret=$CLIENT_SECRET \
+      --data-urlencode device_code=$DEVICE_CODE \
+      --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:device_code" \
+  | jq $FIELD -r
 }
 
 function implicit_grant {
@@ -205,7 +224,7 @@ function show_help {
 echo "PLEASE-OPEN.IT BASH CLIENT"
 echo "SYNOPSIS"
 echo ""
-echo "oidc-client.sh --operation OP --openid-endpoint [--authorization-endpoint --token-introspection-endpoint --token-endpoint --end-session-endpoint] --client-id --client-secret --username --password --scope --access-token --refresh-token --issuer --redirect-uri --authorization-code --field "
+echo "oidc-client.sh --operation OP --openid-endpoint [--authorization-endpoint --token-introspection-endpoint --token-endpoint --end-session-endpoint --device-authorization-endpoint] --client-id --client-secret --username --password --scope --access-token --refresh-token --issuer --redirect-uri --authorization-code --device-code --field "
 
 
 
@@ -226,6 +245,8 @@ echo "    authorization_code_grant"
 echo "    auth_code"
 echo "    token_introspect"
 echo "    user_info"
+echo "    device_code"
+echo "    poll_token"
 echo ""
 echo " --field : filter for JQ"
 echo ""
@@ -263,6 +284,12 @@ while (( "$#" )); do
     --token-introspection-endpoint)
       if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
         TOKEN_INTROSPECTION_ENDPOINT=$2
+        shift 2
+      fi
+      ;;
+    --device-authorization-endpoint)
+      if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        DEVICE_ENDPOINT=$2
         shift 2
       fi
       ;;
@@ -335,6 +362,12 @@ while (( "$#" )); do
     --authorization-code)
       if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
         AUTHORIZATION_CODE=$2
+        shift 2
+      fi
+      ;;
+    --device-code)
+      if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        DEVICE_CODE=$2
         shift 2
       fi
       ;;
@@ -545,14 +578,55 @@ case "$OPERATION" in
       echo "Error: --access-token is missing" >&2
       exit 1
     fi
-    if [ -z "$TOKEN_ENDPOINT" ]; then
+    if [ -z "$USERINFO_ENDPOINT" ]; then
       USERINFO_ENDPOINT=$(curl -sS $OPENID_ENDPOINT | jq .userinfo_endpoint -r)
     fi
     user_info
+    ;;
+  device_code)
+    if [ -z "$OPENID_ENDPOINT" ] && [ -z "$DEVICE_ENDPOINT" ]; then
+      echo "Error: --device-endpoint is missing, you can also use --openid-endpoint" >&2
+      exit 1
+    fi
+    if [ -z "$CLIENT_ID" ]; then
+      echo "Error: --client-id is missing" >&2
+      exit 1
+    fi
+    if [ -z "$CLIENT_SECRET" ]; then
+      echo "Error: --client-secret is missing" >&2
+      exit 1
+    fi
+    if [ -z "$DEVICE_ENDPOINT" ]; then
+      DEVICE_ENDPOINT=$(curl -sS $OPENID_ENDPOINT | jq .device_authorization_endpoint -r)
+    fi
+    device_code
+    ;;
+  poll_token)
+    if [ -z "$OPENID_ENDPOINT" ] && [ -z "$TOKEN_ENDPOINT" ]; then
+      echo "Error: --token-endpoint is missing, you can also use --openid-endpoint" >&2
+      exit 1
+    fi
+    if [ -z "$CLIENT_ID" ]; then
+      echo "Error: --client-id is missing" >&2
+      exit 1
+    fi
+    if [ -z "$CLIENT_SECRET" ]; then
+      echo "Error: --client-secret is missing" >&2
+      exit 1
+    fi
+    if [ -z "$DEVICE_CODE" ]; then
+      echo "Error: --device-code is missing" >&2
+      exit 1
+    fi
+    if [ -z "$TOKEN_ENDPOINT" ]; then
+      TOKEN_ENDPOINT=$(curl -sS $OPENID_ENDPOINT | jq .token_endpoint -r)
+    fi
+    poll_token
     ;;
     *)
     echo "unsupported operation"
     exit 1
     ;;
+  
 esac
 

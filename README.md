@@ -18,6 +18,8 @@ Supported operations are :
 - end session
 - token introspection
 - user infos
+- device code
+- poll token
 
 Use it as a guide for oauth2/openid connect discovery or in any testing/integration process. Script is totally stateless, save the output of a command in variables to reuse tokens.
 
@@ -239,3 +241,24 @@ Get all user informations
 
 --access-token
 
+### device_code
+
+Initiate a device_code flow
+
+--openid-endpoint OR --device-authorization-endpoint
+
+--client-id
+
+--client-secret
+
+### poll_token
+
+Get a token (poll operation, renew if necessary), IE for a device_code flow
+
+--openid-endpoint OR --token-endpoint
+
+--client-id
+
+--client-secret
+
+--device-code
