@@ -93,7 +93,7 @@ function poll_token {
 
 function implicit_grant {
   echo "OPEN THIS URI IN YOUR WEB BROWSER"
-  echo "$AUTHORIZATION_ENDPOINT?client_id=$CLIENT_ID&scope=$SCOPE&response_type=token&response_mode=fragment&redirect_uri=$REDIRECT_URI"
+  echo "$AUTHORIZATION_ENDPOINT?client_id=$CLIENT_ID&scope=$SCOPE&response_type=token&response_mode=fragment&redirect_uri=$REDIRECT_URI&acr_values=$ACR"
 
   echo "-- LISTENING ON PORT 8080 FOR A REDIRECT"
 
@@ -145,7 +145,7 @@ function implicit_grant {
 
 function authorization_code_grant {
   echo "OPEN THIS URI IN YOUR WEB BROWSER"
-  echo "$AUTHORIZATION_ENDPOINT?client_id=$CLIENT_ID&scope=$SCOPE&response_type=code&response_mode=fragment&redirect_uri=$REDIRECT_URI"
+  echo "$AUTHORIZATION_ENDPOINT?client_id=$CLIENT_ID&scope=$SCOPE&response_type=code&response_mode=fragment&redirect_uri=$REDIRECT_URI&acr_values=$ACR"
 
   echo "-- LISTENING ON PORT 8080 FOR A REDIRECT"
 
@@ -224,7 +224,7 @@ function show_help {
 echo "PLEASE-OPEN.IT BASH CLIENT"
 echo "SYNOPSIS"
 echo ""
-echo "oidc-client.sh --operation OP --openid-endpoint [--authorization-endpoint --token-introspection-endpoint --token-endpoint --end-session-endpoint --device-authorization-endpoint] --client-id --client-secret --username --password --scope --access-token --refresh-token --issuer --redirect-uri --authorization-code --device-code --field "
+echo "oidc-client.sh --operation OP --openid-endpoint [--authorization-endpoint --token-introspection-endpoint --token-endpoint --end-session-endpoint --device-authorization-endpoint] --client-id --client-secret --username --password --scope --access-token --refresh-token --issuer --redirect-uri --authorization-code --device-code --acr --field "
 
 
 
@@ -368,6 +368,12 @@ while (( "$#" )); do
     --device-code)
       if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
         DEVICE_CODE=$2
+        shift 2
+      fi
+      ;;
+    --acr)
+      if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        ACR=$2
         shift 2
       fi
       ;;
