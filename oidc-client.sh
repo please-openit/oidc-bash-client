@@ -102,7 +102,7 @@ function implicit_grant {
   rm -f /tmp/out
   mkfifo /tmp/out
   trap "rm -f /tmp/out" EXIT
-  cat /tmp/out | nc -lp 8080 > >( # parse the netcat output, to build the answer redirected to the pipe "/tmp/out".
+  cat /tmp/out | nc -l 8080 > >( # parse the netcat output, to build the answer redirected to the pipe "/tmp/out".
     export REQUEST=
     while read line
     do
@@ -154,7 +154,7 @@ function authorization_code_grant {
   rm -f /tmp/out
   mkfifo /tmp/out
   trap "rm -f /tmp/out" EXIT
-  cat /tmp/out | nc -lp 8080 > >( # parse the netcat output, to build the answer redirected to the pipe "/tmp/out".
+  cat /tmp/out | nc -l 8080 > >( # parse the netcat output, to build the answer redirected to the pipe "/tmp/out".
     export REQUEST=
     while read line
     do
