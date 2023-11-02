@@ -61,6 +61,11 @@ https://accounts.google.com/o/oauth2/v2/auth?client_id=947227895516-68tp60nti613
 -- LISTENING ON PORT 8080 FOR A REDIRECT
 ```
 
+> ✅ Add `--state` (default: "foobar") to the end of the command above to
+> provide a state and/or `--nonce` (default: today's date in UNIX time) to add a
+> nonce. You can also provide a custom state/nonce by adding a string after
+> `--state` or `--nonce`.
+
 Open your web browser and paste the URI shown in the console. You will have a login screen then a consent screen. Afterthat, redirect process will show a page from 127.0.0.1:8080 with all given data. Get your authorization code.
 
 Second step is exchanging an authorization_code for a token. The operation "auth_code" is designed for : 
@@ -68,6 +73,9 @@ Second step is exchanging an authorization_code for a token. The operation "auth
 ```
 ./oidc-client.sh --operation auth_code --client-id 947227895516-68tp60nti613r42u41bch5vesr5iqpbi.apps.googleusercontent.com --client-secret ****************** --openid-endpoint https://accounts.google.com/.well-known/openid-configuration --redirect-uri http://127.0.0.1:8080 --authorization-code 4/0AH1T7cXxcNot62nDDUspvbINZ6vP3Qk9oEiy6xhJmuRbIIdJw65LdOc2QPWKO8qaHTQ67g1qg96mjS5R9dWVFs
 ```
+
+> ✅ If you provided `--state` and `--nonce` earlier, make sure to provide them
+> to `auth_code`. Otherwise, the token exchange will fail.
 
 ![img/google_token.png](img/google_token.png)
 
@@ -207,6 +215,10 @@ By default, redirect URI has to be http://127.0.0.1:8080, you can have your own 
 
 --scope
 
+--state [STATE] (default: "foobar")
+
+--nonce [NONCE] (default: `date +%s`)
+
 ### auth_code
 
 Change an authorization_code to a token
@@ -218,6 +230,10 @@ Change an authorization_code to a token
 --client-secret (optionnal for public clients)
 
 --redirect-uri
+
+--state [STATE] (default: "foobar")
+
+--nonce [NONCE] (default: `date +%s`)
 
 ### token_introspect
 
