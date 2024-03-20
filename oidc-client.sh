@@ -293,6 +293,12 @@ while (( "$#" )); do
         shift 2
       fi
       ;;
+    --userinfo-endpoint)
+      if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        USERINFO_ENDPOINT=$2
+        shift 2
+      fi
+      ;;
     --token-endpoint)
       if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
         TOKEN_ENDPOINT=$2
@@ -635,4 +641,3 @@ case "$OPERATION" in
     ;;
   
 esac
-
