@@ -144,8 +144,11 @@ function implicit_grant {
 }
 
 function authorization_code_grant {
+  params="$AUTHORIZATION_ENDPOINT?client_id=$CLIENT_ID&scope=$SCOPE&response_type=code&response_mode=fragment&redirect_uri=$REDIRECT_URI&acr_values=$ACR"
+  [[ "$ADD_STATE" == 'true' ]] && params="$params&state=$STATE"
+  [[ "$ADD_NONCE" == 'true' ]] && params="$params&nonce=$NONCE"
   echo "OPEN THIS URI IN YOUR WEB BROWSER"
-  echo "$AUTHORIZATION_ENDPOINT?client_id=$CLIENT_ID&scope=$SCOPE&response_type=code&response_mode=fragment&redirect_uri=$REDIRECT_URI&acr_values=$ACR"
+  echo "$params"
 
   echo "-- LISTENING ON PORT 8080 FOR A REDIRECT"
 
@@ -196,15 +199,18 @@ function authorization_code_grant {
 }
 
 function auth_code {
-    curl -sS --request POST --url $TOKEN_ENDPOINT \
+    args=(--request POST --url $TOKEN_ENDPOINT \
       --header 'Accept: */*' \
       --header 'Content-Type: application/x-www-form-urlencoded' \
       --data client_id=$CLIENT_ID \
       --data client_secret=$CLIENT_SECRET \
       --data-urlencode code=$AUTHORIZATION_CODE \
       --data redirect_uri=$REDIRECT_URI \
-      --data grant_type=authorization_code \
- | jq $FIELD -r 
+      --data grant_type=authorization_code
+    )
+    [[ "$ADD_STATE" == 'true' ]] && args+=(--data state="$STATE")
+    [[ "$ADD_NONCE" == 'true' ]] && args+=(--data nonce="$NONCE")
+    curl -sS "${args[@]}" | jq $FIELD -r
 }
 
 function end_session {
@@ -381,6 +387,26 @@ while (( "$#" )); do
       if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
         FIELD=$2
         shift 2
+      fi
+      ;;
+    --state)
+      ADD_STATE=true
+      STATE=foobar
+      if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        ADD_STATE=true
+        STATE="$2"
+        shift 2
+      else shift 1
+      fi
+      ;;
+    --nonce)
+      ADD_NONCE=true
+      NONCE="$(date +%s)"
+      if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        ADD_NONCE=true
+        NONCE="$2"
+        shift 2
+      else shift 1
       fi
       ;;
     -*|--*=) # unsupported flags
