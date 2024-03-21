@@ -230,7 +230,7 @@ function show_help {
 echo "PLEASE-OPEN.IT BASH CLIENT"
 echo "SYNOPSIS"
 echo ""
-echo "oidc-client.sh --operation OP --openid-endpoint [--authorization-endpoint --token-introspection-endpoint --token-endpoint --end-session-endpoint --device-authorization-endpoint] --client-id --client-secret --username --password --scope --access-token --refresh-token --issuer --redirect-uri --authorization-code --device-code --acr --field "
+echo "oidc-client.sh --operation OP --openid-endpoint [--authorization-endpoint --token-introspection-endpoint --token-endpoint --end-session-endpoint --device-authorization-endpoint --userinfo-endpoint] --client-id --client-secret --username --password --scope --access-token --refresh-token --issuer --redirect-uri --authorization-code --device-code --acr --field "
 
 
 
@@ -296,6 +296,12 @@ while (( "$#" )); do
     --device-authorization-endpoint)
       if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
         DEVICE_ENDPOINT=$2
+        shift 2
+      fi
+      ;;
+    --userinfo-endpoint)
+      if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        USERINFO_ENDPOINT=$2
         shift 2
       fi
       ;;
@@ -661,4 +667,3 @@ case "$OPERATION" in
     ;;
   
 esac
-
