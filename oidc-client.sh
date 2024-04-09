@@ -179,19 +179,7 @@ function authorization_code_grant {
           # https://riptutorial.com/bash/example/29664/request-method--get
           ACCESS_TOKEN=$(echo "$REQUEST" | sed -n 's/^.*access_token=\([^&]*\).*$/\1/p')
           echo AUTHORIZATION_CODE=$(echo "$REQUEST" | sed -n 's/^.*code=\([^&]*\).*$/\1/p') >/tmp/code
-          HTML="<html><head><body>code: $AUTHORIZATION_CODE</body><script>\
-                 var paramStr = window.location.hash.substring(1);\
-                 if(paramStr == \"\"){\
-                    paramStr = window.location.search.substring(1);\
-                 }\
-                 var params = {} \
-                 var vars = paramStr.split('&');
-                 for (var i = 0; i < vars.length; i++) {
-                   var pair = vars[i].split('=');
-                   params[pair[0]] = decodeURIComponent(pair[1]);
-                 }
-                 document.write(JSON.stringify(params));
-                 </script></html>"
+          HTML="<html><head><body>You can close this window.</body><script>window.close();</script></html>"
           printf "%s\n%s %s\n\n%s\n" "$HTTP_200" "$HTTP_LOCATION" $REQUEST $HTML > /tmp/out
           exit 0
         fi
@@ -204,7 +192,6 @@ function authorization_code_grant {
 
   # if auth code set, then request
   if [ ! -z "$AUTHORIZATION_CODE" ] ; then 
-    echo Using code: $AUTHORIZATION_CODE
     auth_code
   fi
 
