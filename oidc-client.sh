@@ -1,5 +1,7 @@
 #!/bin/bash
 
+HTTP_PORT=8080
+
 function get_oidc_server_infos {
     curl -sS $OPENID_ENDPOINT | jq $FIELD -r
 }
@@ -93,16 +95,16 @@ function poll_token {
 
 function implicit_grant {
   echo "OPEN THIS URI IN YOUR WEB BROWSER"
-  echo "$AUTHORIZATION_ENDPOINT?client_id=$CLIENT_ID&scope=$SCOPE&response_type=token&response_mode=fragment&redirect_uri=$REDIRECT_URI&acr_values=$ACR"
+  echo "$AUTHORIZATION_ENDPOINT?client_id=$CLIENT_ID&scope=$SCOPE&response_type=token&response_mode=query&redirect_uri=$REDIRECT_URI&acr_values=$ACR"
 
-  echo "-- LISTENING ON PORT 8080 FOR A REDIRECT"
+  echo "-- LISTENING ON PORT $HTTP_PORT FOR A REDIRECT"
 
   # listening for a reponse
   # from : https://stackoverflow.com/questions/26455434/create-a-minimum-rest-web-server-with-netcat-nc
   rm -f /tmp/out
   mkfifo /tmp/out
   trap "rm -f /tmp/out" EXIT
-  cat /tmp/out | nc -l 8080 > >( # parse the netcat output, to build the answer redirected to the pipe "/tmp/out".
+  cat /tmp/out | nc -l $HTTP_PORT > >( # parse the netcat output, to build the answer redirected to the pipe "/tmp/out".
     export REQUEST=
     while read line
     do
@@ -144,20 +146,20 @@ function implicit_grant {
 }
 
 function authorization_code_grant {
-  params="$AUTHORIZATION_ENDPOINT?client_id=$CLIENT_ID&scope=$SCOPE&response_type=code&response_mode=fragment&redirect_uri=$REDIRECT_URI&acr_values=$ACR"
+  params="$AUTHORIZATION_ENDPOINT?client_id=$CLIENT_ID&scope=$SCOPE&response_type=code&response_mode=query&redirect_uri=$REDIRECT_URI&acr_values=$ACR"
   [[ "$ADD_STATE" == 'true' ]] && params="$params&state=$STATE"
   [[ "$ADD_NONCE" == 'true' ]] && params="$params&nonce=$NONCE"
   echo "OPEN THIS URI IN YOUR WEB BROWSER"
   echo "$params"
 
-  echo "-- LISTENING ON PORT 8080 FOR A REDIRECT"
+  echo "-- LISTENING ON PORT $HTTP_PORT FOR A REDIRECT"
 
   # listening for a reponse
   # from : https://stackoverflow.com/questions/26455434/create-a-minimum-rest-web-server-with-netcat-nc
   rm -f /tmp/out
   mkfifo /tmp/out
   trap "rm -f /tmp/out" EXIT
-  cat /tmp/out | nc -l 8080 > >( # parse the netcat output, to build the answer redirected to the pipe "/tmp/out".
+  cat /tmp/out | nc -l $HTTP_PORT > >( # parse the netcat output, to build the answer redirected to the pipe "/tmp/out".
     export REQUEST=
     while read line
     do
@@ -176,19 +178,8 @@ function authorization_code_grant {
         then
           # https://riptutorial.com/bash/example/29664/request-method--get
           ACCESS_TOKEN=$(echo "$REQUEST" | sed -n 's/^.*access_token=\([^&]*\).*$/\1/p')
-          HTML="<html><head><body></body><script>\
-                 var paramStr = window.location.hash.substring(1);\
-                 if(paramStr == \"\"){\
-                    paramStr = window.location.search.substring(1);\
-                 }\
-                 var params = {} \
-                 var vars = paramStr.split('&');
-                 for (var i = 0; i < vars.length; i++) {
-                   var pair = vars[i].split('=');
-                   params[pair[0]] = decodeURIComponent(pair[1]);
-                 }
-                 document.write(JSON.stringify(params));
-                 </script></html>"
+          echo AUTHORIZATION_CODE=$(echo "$REQUEST" | sed -n 's/^.*code=\([^&]*\).*$/\1/p') >/tmp/code
+          HTML="<html><head><body>You can close this window.</body><script>window.close();</script></html>"
           printf "%s\n%s %s\n\n%s\n" "$HTTP_200" "$HTTP_LOCATION" $REQUEST $HTML > /tmp/out
           exit 0
         fi
@@ -196,6 +187,14 @@ function authorization_code_grant {
     done
     exit 1
   )
+
+  . /tmp/code
+
+  # if auth code set, then request
+  if [ ! -z "$AUTHORIZATION_CODE" ] ; then 
+    auth_code
+  fi
+
 }
 
 function auth_code {
@@ -255,6 +254,9 @@ echo "    device_code"
 echo "    poll_token"
 echo ""
 echo " --field : filter for JQ"
+echo " --redirect-http-port : open a port and listen for a redirect"
+echo " --random-redirect-http-port : open a random port and listen for a redirect"
+
 echo ""
 echo "More : "
 }
@@ -304,6 +306,25 @@ while (( "$#" )); do
         USERINFO_ENDPOINT=$2
         shift 2
       fi
+      ;;
+    --redirect-http-port)
+      if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        HTTP_PORT=$2
+        REDIRECT_URI=http://localhost:$HTTP_PORT
+        shift 2
+      fi
+      ;;
+    --random-redirect-http-port)
+      nc -l localhost 0 &
+
+      HTTP_PORT=$(lsof -i \
+      | grep $! \
+      | awk '{print $9}' \
+      | cut -d':' -f2;)
+      REDIRECT_URI=http://localhost:$HTTP_PORT
+
+      kill $!;
+      shift
       ;;
     --token-endpoint)
       if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
@@ -564,6 +585,9 @@ case "$OPERATION" in
     if [ -z "$AUTHORIZATION_ENDPOINT" ]; then
       AUTHORIZATION_ENDPOINT=$(curl -sS $OPENID_ENDPOINT | jq .authorization_endpoint -r)
     fi
+    if [ -z "$TOKEN_ENDPOINT" ]; then
+      TOKEN_ENDPOINT=$(curl -sS $OPENID_ENDPOINT | jq .token_endpoint -r)
+    fi    
     authorization_code_grant
     ;;
   auth_code)
