@@ -146,9 +146,15 @@ function implicit_grant {
 }
 
 function authorization_code_grant {
+  if [ ! -z "$PKCE" ] ; then
+    echo "-- Generating PKCE CODES"
+    gen_pkce_codes
+  fi
+
   params="$AUTHORIZATION_ENDPOINT?client_id=$CLIENT_ID&scope=$SCOPE&response_type=code&response_mode=query&redirect_uri=$REDIRECT_URI&acr_values=$ACR"
   [[ "$ADD_STATE" == 'true' ]] && params="$params&state=$STATE"
   [[ "$ADD_NONCE" == 'true' ]] && params="$params&nonce=$NONCE"
+  [[ "$PKCE" == 'true' ]] && params="$params&code_challenge_method=S256&code_challenge=$CHALLENGE"
   echo "OPEN THIS URI IN YOUR WEB BROWSER"
   echo "$params"
 
@@ -209,6 +215,7 @@ function auth_code {
     )
     [[ "$ADD_STATE" == 'true' ]] && args+=(--data state="$STATE")
     [[ "$ADD_NONCE" == 'true' ]] && args+=(--data nonce="$NONCE")
+    [[ "$PKCE" == 'true' ]] && args+=(--data code_verifier="$VERIFIER")
     curl -sS "${args[@]}" | jq $FIELD -r
 }
 
@@ -223,13 +230,24 @@ function end_session {
  | jq $FIELD -r
 }
 
+function gen_pkce_codes() {
+  echo "Generating PKCE Verifier"
+  VERIFIER=$(LC_CTYPE=C && LANG=C && cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 50 | head -n 1)
+  echo "Verifier is: $VERIFIER"
+  #Generate PKCE Challenge from Verifier and convert / + = characters"
+  CHALLENGE=$(/bin/echo -n $VERIFIER | shasum -a 256 | cut -d " " -f 1 | xxd -r -p | base64 | tr / _ | tr + - | tr -d =)
+  echo "Challenge is: $CHALLENGE"
+  echo ""
+  echo "*********************"
+}
+
 
 function show_help {
 
 echo "PLEASE-OPEN.IT BASH CLIENT"
 echo "SYNOPSIS"
 echo ""
-echo "oidc-client.sh --operation OP --openid-endpoint [--authorization-endpoint --token-introspection-endpoint --token-endpoint --end-session-endpoint --device-authorization-endpoint --userinfo-endpoint] --client-id --client-secret --username --password --scope --access-token --refresh-token --issuer --redirect-uri --authorization-code --device-code --acr --field "
+echo "oidc-client.sh --operation OP --openid-endpoint [--authorization-endpoint --token-introspection-endpoint --token-endpoint --end-session-endpoint --device-authorization-endpoint --userinfo-endpoint] --client-id --client-secret --username --password --scope --access-token --refresh-token --issuer --redirect-uri --authorization-code --device-code --acr --field --enable-pkce "
 
 
 
@@ -256,6 +274,7 @@ echo ""
 echo " --field : filter for JQ"
 echo " --redirect-http-port : open a port and listen for a redirect"
 echo " --random-redirect-http-port : open a random port and listen for a redirect"
+echo " --enable-pkce: to use PKCE authorization code flow"
 
 echo ""
 echo "More : "
@@ -324,6 +343,10 @@ while (( "$#" )); do
       REDIRECT_URI=http://localhost:$HTTP_PORT
 
       kill $!;
+      shift
+      ;;
+    --enable-pkce)
+      PKCE=true
       shift
       ;;
     --token-endpoint)
