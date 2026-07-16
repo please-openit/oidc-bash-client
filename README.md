@@ -19,6 +19,7 @@ Supported operations are :
 - end session
 - token introspection
 - token revocation (RFC 7009)
+- pushed authorization request / PAR (RFC 9126)
 - user infos
 - device code
 - poll token
@@ -236,6 +237,12 @@ By default, redirect URI has to be http://127.0.0.1:8080, you can have your own 
 --state [STATE] (default: "foobar")
 
 --nonce [NONCE] (default: `date +%s`)
+
+--enable-pkce (optionnal, PKCE flow RFC 7636)
+
+--enable-par (optionnal, Pushed Authorization Request RFC 9126)
+
+With `--enable-par`, the authorization request parameters are first POSTed to the pushed authorization request endpoint, and the browser is then redirected using only `client_id` and the returned `request_uri`. Combines with `--enable-pkce`, `--state` and `--nonce`. Endpoint is discovered from `--openid-endpoint`, or set it explicitly with `--pushed-authorization-request-endpoint`.
 
 ### auth_code
 

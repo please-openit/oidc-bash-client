@@ -172,16 +172,43 @@ function implicit_grant {
   )
 }
 
+function pushed_authorization_request {
+  # RFC 9126 : push the authorization request parameters to the PAR endpoint,
+  # the server answers with a request_uri to be used in the authorization request.
+  par_args=(--request POST --url $PAR_ENDPOINT \
+    --header 'Accept: */*' \
+    --header 'Content-Type: application/x-www-form-urlencoded' \
+    --data client_id=$CLIENT_ID \
+    --data client_secret=$CLIENT_SECRET \
+    --data response_type=code \
+    --data response_mode=query \
+    --data scope=$SCOPE \
+    --data redirect_uri=$REDIRECT_URI \
+    --data acr_values=$ACR
+  )
+  [[ "$ADD_STATE" == 'true' ]] && par_args+=(--data state="$STATE")
+  [[ "$ADD_NONCE" == 'true' ]] && par_args+=(--data nonce="$NONCE")
+  [[ "$PKCE" == 'true' ]] && par_args+=(--data code_challenge_method=S256 --data code_challenge="$CHALLENGE")
+  REQUEST_URI=$(curl -sS "${par_args[@]}" | jq .request_uri -r)
+}
+
 function authorization_code_grant {
   if [ ! -z "$PKCE" ] ; then
     echo "-- Generating PKCE CODES"
     gen_pkce_codes
   fi
 
-  params="$AUTHORIZATION_ENDPOINT?client_id=$CLIENT_ID&scope=$SCOPE&response_type=code&response_mode=query&redirect_uri=$REDIRECT_URI&acr_values=$ACR"
-  [[ "$ADD_STATE" == 'true' ]] && params="$params&state=$STATE"
-  [[ "$ADD_NONCE" == 'true' ]] && params="$params&nonce=$NONCE"
-  [[ "$PKCE" == 'true' ]] && params="$params&code_challenge_method=S256&code_challenge=$CHALLENGE"
+  if [ ! -z "$PAR" ] ; then
+    echo "-- Sending Pushed Authorization Request"
+    pushed_authorization_request
+    echo "request_uri is: $REQUEST_URI"
+    params="$AUTHORIZATION_ENDPOINT?client_id=$CLIENT_ID&request_uri=$REQUEST_URI"
+  else
+    params="$AUTHORIZATION_ENDPOINT?client_id=$CLIENT_ID&scope=$SCOPE&response_type=code&response_mode=query&redirect_uri=$REDIRECT_URI&acr_values=$ACR"
+    [[ "$ADD_STATE" == 'true' ]] && params="$params&state=$STATE"
+    [[ "$ADD_NONCE" == 'true' ]] && params="$params&nonce=$NONCE"
+    [[ "$PKCE" == 'true' ]] && params="$params&code_challenge_method=S256&code_challenge=$CHALLENGE"
+  fi
   echo "OPEN THIS URI IN YOUR WEB BROWSER"
   echo "$params"
 
@@ -274,7 +301,7 @@ function show_help {
 echo "PLEASE-OPEN.IT BASH CLIENT"
 echo "SYNOPSIS"
 echo ""
-echo "oidc-client.sh --operation OP --openid-endpoint [--authorization-endpoint --token-introspection-endpoint --revocation-endpoint --token-endpoint --end-session-endpoint --device-authorization-endpoint --userinfo-endpoint] --client-id --client-secret --username --password --scope --access-token --refresh-token --token --token-type-hint --issuer --assertion --redirect-uri --authorization-code --device-code --acr --field --enable-pkce "
+echo "oidc-client.sh --operation OP --openid-endpoint [--authorization-endpoint --token-introspection-endpoint --revocation-endpoint --pushed-authorization-request-endpoint --token-endpoint --end-session-endpoint --device-authorization-endpoint --userinfo-endpoint] --client-id --client-secret --username --password --scope --access-token --refresh-token --token --token-type-hint --issuer --assertion --redirect-uri --authorization-code --device-code --acr --field --enable-pkce --enable-par "
 
 
 
@@ -304,6 +331,7 @@ echo " --field : filter for JQ"
 echo " --redirect-http-port : open a port and listen for a redirect"
 echo " --random-redirect-http-port : open a random port and listen for a redirect"
 echo " --enable-pkce: to use PKCE authorization code flow"
+echo " --enable-par: to push the authorization request (RFC 9126) before authorization_code_grant"
 
 echo ""
 echo "More : "
@@ -348,6 +376,16 @@ while (( "$#" )); do
         REVOCATION_ENDPOINT=$2
         shift 2
       fi
+      ;;
+    --pushed-authorization-request-endpoint)
+      if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        PAR_ENDPOINT=$2
+        shift 2
+      fi
+      ;;
+    --enable-par)
+      PAR=true
+      shift
       ;;
     --device-authorization-endpoint)
       if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
@@ -681,6 +719,9 @@ case "$OPERATION" in
     fi
     if [ -z "$TOKEN_ENDPOINT" ]; then
       TOKEN_ENDPOINT=$(curl -sS $OPENID_ENDPOINT | jq .token_endpoint -r)
+    fi
+    if [ ! -z "$PAR" ] && [ -z "$PAR_ENDPOINT" ]; then
+      PAR_ENDPOINT=$(curl -sS $OPENID_ENDPOINT | jq .pushed_authorization_request_endpoint -r)
     fi
     authorization_code_grant
     ;;
