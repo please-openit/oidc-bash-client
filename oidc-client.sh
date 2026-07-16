@@ -44,6 +44,19 @@ function resource_owner_password_grant {
 
 }
 
+function jwt_bearer {
+    curl -sS --request POST --url $TOKEN_ENDPOINT \
+      --header 'Accept: */*' \
+      --header 'Content-Type: application/x-www-form-urlencoded' \
+      --data client_id=$CLIENT_ID \
+      --data client_secret=$CLIENT_SECRET \
+      --data scope=$SCOPE \
+      --data-urlencode assertion=$ASSERTION \
+      --data-urlencode "grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer" \
+ | jq $FIELD -r
+
+}
+
 function refresh_token {
     curl -sS --request POST --url $TOKEN_ENDPOINT \
       --header 'Accept: */*' \
@@ -247,7 +260,7 @@ function show_help {
 echo "PLEASE-OPEN.IT BASH CLIENT"
 echo "SYNOPSIS"
 echo ""
-echo "oidc-client.sh --operation OP --openid-endpoint [--authorization-endpoint --token-introspection-endpoint --token-endpoint --end-session-endpoint --device-authorization-endpoint --userinfo-endpoint] --client-id --client-secret --username --password --scope --access-token --refresh-token --issuer --redirect-uri --authorization-code --device-code --acr --field --enable-pkce "
+echo "oidc-client.sh --operation OP --openid-endpoint [--authorization-endpoint --token-introspection-endpoint --token-endpoint --end-session-endpoint --device-authorization-endpoint --userinfo-endpoint] --client-id --client-secret --username --password --scope --access-token --refresh-token --issuer --assertion --redirect-uri --authorization-code --device-code --acr --field --enable-pkce "
 
 
 
@@ -262,6 +275,7 @@ echo "    client_credentials"
 echo "    resource_owner_password_grant"
 echo "    end_session"
 echo "    refresh_token"
+echo "    jwt_bearer"
 echo "    token_exchange"
 echo "    implicit_grant"
 echo "    authorization_code_grant"
@@ -409,6 +423,12 @@ while (( "$#" )); do
         shift 2
       fi
       ;;
+    --assertion)
+      if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        ASSERTION=$2
+        shift 2
+      fi
+      ;;
     --redirect-uri)
       if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
         REDIRECT_URI=$2
@@ -551,6 +571,24 @@ case "$OPERATION" in
       TOKEN_ENDPOINT=$(curl -sS $OPENID_ENDPOINT | jq .token_endpoint -r)
     fi
     refresh_token
+    ;;
+  jwt_bearer)
+    if [ -z "$OPENID_ENDPOINT" ] && [ -z "$TOKEN_ENDPOINT" ]; then
+      echo "Error: --token-endpoint is missing, you can also use --openid-endpoint" >&2
+      exit 1
+    fi
+    if [ -z "$CLIENT_ID" ]; then
+      echo "Error: --client-id is missing" >&2
+      exit 1
+    fi
+    if [ -z "$ASSERTION" ]; then
+      echo "Error: --assertion is missing" >&2
+      exit 1
+    fi
+    if [ -z "$TOKEN_ENDPOINT" ]; then
+      TOKEN_ENDPOINT=$(curl -sS $OPENID_ENDPOINT | jq .token_endpoint -r)
+    fi
+    jwt_bearer
     ;;
   token_exchange)
     if [ -z "$OPENID_ENDPOINT" ] && [ -z "$TOKEN_ENDPOINT" ]; then

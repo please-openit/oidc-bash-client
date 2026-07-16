@@ -14,6 +14,7 @@ Supported operations are :
 - resource owner password
 - auth code exchange
 - token exchange
+- jwt bearer (jwt authorization grant)
 - refresh token
 - end session
 - token introspection
@@ -176,6 +177,22 @@ Perform a token_exchange operation
 --access_token
 
 --issuer
+
+### jwt_bearer
+
+[https://www.keycloak.org/securing-apps/jwt-authorization-grant](https://www.keycloak.org/securing-apps/jwt-authorization-grant)
+
+Exchange a signed JWT assertion (RFC 7523, grant_type `urn:ietf:params:oauth:grant-type:jwt-bearer`) for an access_token. The assertion is a JWT signed by a trusted external identity provider (claims: iss, sub, aud, exp, iat, jti). You must build and sign it yourself, then pass it with --assertion.
+
+--openid-endpoint OR --token-endpoint
+
+--client-id
+
+--client-secret (optionnal if client is public)
+
+--assertion (the signed JWT)
+
+--scope (optionnal)
 
 ### implicit_grant
 
