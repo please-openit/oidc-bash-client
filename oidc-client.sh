@@ -78,6 +78,20 @@ function token_introspect {
  | jq $FIELD -r
 }
 
+function revoke {
+    # RFC 7009 : a successful revocation returns an empty HTTP 200 response,
+    # so we don't pipe to jq (only an error body, if any, is printed).
+    args=(--request POST --url $REVOCATION_ENDPOINT \
+      --header 'Accept: */*' \
+      --header 'Content-Type: application/x-www-form-urlencoded' \
+      --data client_id=$CLIENT_ID \
+      --data client_secret=$CLIENT_SECRET \
+      --data token=$TOKEN
+    )
+    [[ ! -z "$TOKEN_TYPE_HINT" ]] && args+=(--data token_type_hint="$TOKEN_TYPE_HINT")
+    curl -sS "${args[@]}"
+}
+
 function user_info {
     curl -sS --request GET --url $USERINFO_ENDPOINT \
       --header 'Accept: */*' \
@@ -260,7 +274,7 @@ function show_help {
 echo "PLEASE-OPEN.IT BASH CLIENT"
 echo "SYNOPSIS"
 echo ""
-echo "oidc-client.sh --operation OP --openid-endpoint [--authorization-endpoint --token-introspection-endpoint --token-endpoint --end-session-endpoint --device-authorization-endpoint --userinfo-endpoint] --client-id --client-secret --username --password --scope --access-token --refresh-token --issuer --assertion --redirect-uri --authorization-code --device-code --acr --field --enable-pkce "
+echo "oidc-client.sh --operation OP --openid-endpoint [--authorization-endpoint --token-introspection-endpoint --revocation-endpoint --token-endpoint --end-session-endpoint --device-authorization-endpoint --userinfo-endpoint] --client-id --client-secret --username --password --scope --access-token --refresh-token --token --token-type-hint --issuer --assertion --redirect-uri --authorization-code --device-code --acr --field --enable-pkce "
 
 
 
@@ -281,6 +295,7 @@ echo "    implicit_grant"
 echo "    authorization_code_grant"
 echo "    auth_code"
 echo "    token_introspect"
+echo "    revoke"
 echo "    user_info"
 echo "    device_code"
 echo "    poll_token"
@@ -325,6 +340,12 @@ while (( "$#" )); do
     --token-introspection-endpoint)
       if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
         TOKEN_INTROSPECTION_ENDPOINT=$2
+        shift 2
+      fi
+      ;;
+    --revocation-endpoint)
+      if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        REVOCATION_ENDPOINT=$2
         shift 2
       fi
       ;;
@@ -426,6 +447,18 @@ while (( "$#" )); do
     --assertion)
       if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
         ASSERTION=$2
+        shift 2
+      fi
+      ;;
+    --token)
+      if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        TOKEN=$2
+        shift 2
+      fi
+      ;;
+    --token-type-hint)
+      if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+        TOKEN_TYPE_HINT=$2
         shift 2
       fi
       ;;
@@ -648,7 +681,7 @@ case "$OPERATION" in
     fi
     if [ -z "$TOKEN_ENDPOINT" ]; then
       TOKEN_ENDPOINT=$(curl -sS $OPENID_ENDPOINT | jq .token_endpoint -r)
-    fi    
+    fi
     authorization_code_grant
     ;;
   auth_code)
@@ -690,6 +723,24 @@ case "$OPERATION" in
       TOKEN_INTROSPECTION_ENDPOINT=$(curl -sS $OPENID_ENDPOINT | jq .introspection_endpoint -r)
     fi
     token_introspect
+    ;;
+  revoke)
+    if [ -z "$OPENID_ENDPOINT" ] && [ -z "$REVOCATION_ENDPOINT" ]; then
+      echo "Error: --revocation-endpoint is missing, you can also use --openid-endpoint" >&2
+      exit 1
+    fi
+    if [ -z "$CLIENT_ID" ] && [ -z "$CLIENT_SECRET" ]; then
+      echo "Error: --client-id or --client-secret is missing" >&2
+      exit 1
+    fi
+    if [ -z "$TOKEN" ]; then
+      echo "Error: --token is missing" >&2
+      exit 1
+    fi
+    if [ -z "$REVOCATION_ENDPOINT" ]; then
+      REVOCATION_ENDPOINT=$(curl -sS $OPENID_ENDPOINT | jq .revocation_endpoint -r)
+    fi
+    revoke
     ;;
 
   user_info)

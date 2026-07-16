@@ -18,6 +18,7 @@ Supported operations are :
 - refresh token
 - end session
 - token introspection
+- token revocation (RFC 7009)
 - user infos
 - device code
 - poll token
@@ -265,6 +266,22 @@ Get details about a token
 --client-secret
 
 --access-token
+
+### revoke
+
+[https://datatracker.ietf.org/doc/html/rfc7009](https://datatracker.ietf.org/doc/html/rfc7009)
+
+Revoke an access_token or a refresh_token. A successful revocation returns an empty HTTP 200 response (no output).
+
+--openid-endpoint OR --revocation-endpoint
+
+--client-id
+
+--client-secret (optionnal if client is public)
+
+--token (the access_token or refresh_token to revoke)
+
+--token-type-hint (optionnal : access_token or refresh_token)
 
 ### user_info
 
